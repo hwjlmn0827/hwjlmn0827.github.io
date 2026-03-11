@@ -8,7 +8,6 @@
 <meta name="theme-color" content="#0a0a0f">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
 <title>LeetCode Hot 100</title>
 <style>
 /* ═══════════════════════════════════════════════════════
@@ -339,7 +338,7 @@ body {
   font-weight: 600; font-family: var(--font-mono);
 }
 .code-block {
-  background: #1d1f21; border: 1px solid var(--border);
+  background: #1e1e2e; border: 1px solid var(--border);
   border-radius: var(--radius-sm); padding: 0;
   overflow-x: auto; -webkit-overflow-scrolling: touch;
   tab-size: 4;
@@ -350,9 +349,21 @@ body {
 }
 .code-block pre code {
   font-family: var(--font-mono); font-size: 13px;
-  background: transparent !important;
+  color: #cdd6f4; background: transparent !important;
   text-shadow: none !important;
 }
+/* ── Prism 暗色主题 (默认) ── */
+.token.comment, .token.prolog, .token.doctype, .token.cdata { color: #6c7086; font-style: italic; }
+.token.punctuation { color: #bac2de; }
+.token.property, .token.tag, .token.boolean, .token.number, .token.constant, .token.symbol { color: #fab387; }
+.token.selector, .token.attr-name, .token.string, .token.char, .token.builtin { color: #a6e3a1; }
+.token.operator, .token.entity, .token.url { color: #89dceb; }
+.token.atrule, .token.attr-value, .token.keyword { color: #cba6f7; }
+.token.function, .token.class-name { color: #89b4fa; }
+.token.regex, .token.important, .token.variable { color: #f9e2af; }
+.token.important, .token.bold { font-weight: bold; }
+.token.italic { font-style: italic; }
+.token.function-variable { color: #89b4fa; }
 
 /* 完成按钮 */
 .done-btn {
@@ -562,8 +573,26 @@ body {
   background: rgba(0,0,0,0.04);
 }
 [data-theme="light"] .code-block {
-  background: #2d2d2d; border-color: rgba(0,0,0,0.1);
+  background: #f6f8fa; border-color: rgba(0,0,0,0.1);
 }
+[data-theme="light"] .code-block pre code { color: #24292e; }
+[data-theme="light"] .token.comment, [data-theme="light"] .token.prolog,
+[data-theme="light"] .token.doctype, [data-theme="light"] .token.cdata { color: #6a737d; font-style: italic; }
+[data-theme="light"] .token.punctuation { color: #24292e; }
+[data-theme="light"] .token.property, [data-theme="light"] .token.tag,
+[data-theme="light"] .token.boolean, [data-theme="light"] .token.number,
+[data-theme="light"] .token.constant, [data-theme="light"] .token.symbol { color: #005cc5; }
+[data-theme="light"] .token.selector, [data-theme="light"] .token.attr-name,
+[data-theme="light"] .token.string, [data-theme="light"] .token.char,
+[data-theme="light"] .token.builtin { color: #032f62; }
+[data-theme="light"] .token.operator, [data-theme="light"] .token.entity,
+[data-theme="light"] .token.url { color: #d73a49; }
+[data-theme="light"] .token.atrule, [data-theme="light"] .token.attr-value,
+[data-theme="light"] .token.keyword { color: #d73a49; }
+[data-theme="light"] .token.function, [data-theme="light"] .token.class-name { color: #6f42c1; }
+[data-theme="light"] .token.function-variable { color: #6f42c1; }
+[data-theme="light"] .token.regex, [data-theme="light"] .token.important,
+[data-theme="light"] .token.variable { color: #e36209; }
 [data-theme="light"] .stats-bar {
   background: rgba(0,0,0,0.06);
 }
