@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lc-hot100-v1';
+const CACHE_NAME = 'lc-hot100-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -7,7 +7,7 @@ const ASSETS = [
   './icon-512.png'
 ];
 
-// Install: cache all assets
+// Install: cache all assets and immediately activate
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -25,23 +25,23 @@ self.addEventListener('activate', event => {
   );
 });
 
-// Fetch: cache-first strategy
+// Fetch: network-first strategy (try network, fallback to cache)
 self.addEventListener('fetch', event => {
   event.respondWith(
-    caches.match(event.request).then(cached => {
-      if (cached) return cached;
-      return fetch(event.request).then(response => {
-        // Don't cache non-GET or external requests
-        if (event.request.method !== 'GET' || !event.request.url.startsWith(self.location.origin)) {
-          return response;
+    fetch(event.request)
+      .then(response => {
+        // Update cache with fresh response
+        if (event.request.method === 'GET' && event.request.url.startsWith(self.location.origin)) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         }
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         return response;
-      });
-    }).catch(() => {
-      // Offline fallback
-      return caches.match('./index.html');
-    })
+      })
+      .catch(() => {
+        // Network failed, fallback to cache
+        return caches.match(event.request).then(cached => {
+          return cached || caches.match('./index.html');
+        });
+      })
   );
 });
