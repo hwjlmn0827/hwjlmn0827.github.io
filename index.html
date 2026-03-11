@@ -8,6 +8,7 @@
 <meta name="theme-color" content="#0a0a0f">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
 <title>LeetCode Hot 100</title>
 <style>
 /* ═══════════════════════════════════════════════════════
@@ -338,12 +339,19 @@ body {
   font-weight: 600; font-family: var(--font-mono);
 }
 .code-block {
-  background: var(--bg-primary); border: 1px solid var(--border);
-  border-radius: var(--radius-sm); padding: 16px;
+  background: #1d1f21; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 0;
   overflow-x: auto; -webkit-overflow-scrolling: touch;
-  font-family: var(--font-mono); font-size: 13px;
-  line-height: 1.65; color: #e2e8f0; white-space: pre;
   tab-size: 4;
+}
+.code-block pre {
+  margin: 0; padding: 16px; background: transparent !important;
+  font-size: 13px; line-height: 1.65;
+}
+.code-block pre code {
+  font-family: var(--font-mono); font-size: 13px;
+  background: transparent !important;
+  text-shadow: none !important;
 }
 
 /* 完成按钮 */
@@ -554,8 +562,7 @@ body {
   background: rgba(0,0,0,0.04);
 }
 [data-theme="light"] .code-block {
-  background: #1e1e2e; color: #e2e8f0;
-  border-color: rgba(0,0,0,0.1);
+  background: #2d2d2d; border-color: rgba(0,0,0,0.1);
 }
 [data-theme="light"] .stats-bar {
   background: rgba(0,0,0,0.06);
@@ -975,7 +982,7 @@ function renderDetail() {
     ${panelHTML('💡','思路提示', `<p>${esc(p.hint)}</p>`, true)}
     ${panelHTML('📝', p.solution_name||'解法',
       `${p.time_complexity ? `<div class="complexity-row"><span class="complexity-tag">⏱ ${esc(p.time_complexity)}</span><span class="complexity-tag">💾 ${esc(p.space_complexity||'-')}</span></div>` : ''}<p>${esc(p.solution||'')}</p>`, false)}
-    ${panelHTML('💻','代码实现', `<div class="code-block">${esc(p.code||'')}</div>`, false)}
+    ${panelHTML('💻','代码实现', `<div class="code-block"><pre><code class="language-javascript">${esc(p.code||'')}</code></pre></div>`, false)}
     <button class="ai-btn" onclick="openAI(${p.id})">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
       AI 问答助手
@@ -1002,6 +1009,10 @@ function panelHTML(icon, title, body, open) {
 function togglePanel(id) {
   $(id+'b').classList.toggle('open');
   $(id+'a').classList.toggle('open');
+  // 展开时触发代码高亮
+  if ($(id+'b').classList.contains('open')) {
+    setTimeout(() => { if(typeof Prism !== 'undefined') Prism.highlightAll(); }, 50);
+  }
 }
 
 function renderStats() {
@@ -1432,6 +1443,15 @@ if ('serviceWorker' in navigator) {
 //  Init
 // ═══════════════════════════════════════════════════════
 render();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-javascript.min.js"></script>
+<script>
+// 每次渲染详情页后重新高亮代码
+const _origRender = render;
+window._highlightCode = () => { if(typeof Prism !== 'undefined') Prism.highlightAll(); };
+const origRenderDetail = renderDetail;
+renderDetail = function() { origRenderDetail(); setTimeout(window._highlightCode, 50); };
 </script>
 </body>
 </html>
