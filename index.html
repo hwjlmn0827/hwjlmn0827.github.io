@@ -1469,7 +1469,21 @@ initTheme();
 //  PWA Registration
 // ═══════════════════════════════════════════════════════
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  navigator.serviceWorker.register('sw.js').then(reg => {
+    // 检测到新 SW 时立即激活并刷新
+    reg.addEventListener('updatefound', () => {
+      const newSW = reg.installing;
+      if (newSW) {
+        newSW.addEventListener('statechange', () => {
+          if (newSW.state === 'activated' && navigator.serviceWorker.controller) {
+            window.location.reload();
+          }
+        });
+      }
+    });
+    // 每次打开页面都检查更新
+    reg.update().catch(() => {});
+  }).catch(() => {});
 }
 
 // ═══════════════════════════════════════════════════════
