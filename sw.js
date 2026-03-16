@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lc-hot100-v12';
+const CACHE_NAME = 'lc-hot100-v14';
 const ASSETS = [
   './',
   './index.html',
