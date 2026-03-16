@@ -380,8 +380,15 @@ body {
 [data-theme="light"] .desc-example-block {
   background: #f6f7f9; border-color: #e0e0e6; color: #444;
 }
+.desc-example-block .ex-row {
+  display: block; line-height: 1.75;
+}
 .desc-example-block .ex-label {
-  color: var(--text-primary); font-weight: 600;
+  color: var(--text-primary); font-weight: 700;
+  margin-right: 2px;
+}
+.desc-example-block .ex-val {
+  color: var(--text-primary);
 }
 /* 提示列表 */
 .desc-hints {
@@ -1096,64 +1103,63 @@ function formatDesc(text) {
   let html = '';
   let i = 0;
 
-  // 行内代码：`code` 或 code 形式（反引号）
-  function inlineCode(s) {
-    // 把 `xxx` 转为 <code>xxx</code>
-    return esc(s).replace(/`([^`]+)`/g, (_, c) => `<code>${c}</code>`);
+  // 处理行内样式：上标 (10^4 → 10<sup>4</sup>) + 行内代码 (`x` → <code>x</code>)
+  function inline(s) {
+    return esc(s)
+      // 上标：数字^数字，如 10^4、2^31
+      .replace(/(\d+)\^(\d+)/g, '$1<sup>$2</sup>')
+      // 行内代码：`xxx`
+      .replace(/`([^`]+)`/g, (_, c) => `<code>${c}</code>`);
   }
+
+  // 示例块内每行：输入/输出/解释 加粗，值部分用等宽字体
+  function exampleLine(raw) {
+    const t = raw.trim();
+    if (!t) return '';
+    const m = t.match(/^(输入|输出|解释)[：:]\s*(.*)/s);
+    if (m) {
+      const label = m[1];
+      const val = esc(m[2]);
+      return `<div class="ex-row"><span class="ex-label">${label}：</span><span class="ex-val">${val}</span></div>`;
+    }
+    return `<div class="ex-row ex-val">${esc(t)}</div>`;
+  }
+
+  const isExampleStart = l => /^示例\s*\d+[：:]/.test(l.trim());
+  const isHintStart    = l => /^提示[：:]/.test(l.trim());
+  const isAdvanced     = l => /^进阶[：:]/.test(l.trim());
+  const isBullet       = l => /^[•\-\*]\s/.test(l.trim());
+  const isBreak        = l => l.trim() === '';
 
   while (i < lines.length) {
     const line = lines[i];
 
-    // 空行 → 段落分隔
-    if (line.trim() === '') { i++; continue; }
+    // 空行
+    if (isBreak(line)) { i++; continue; }
 
-    // 示例标题：「示例 N：」或「示例 N:」
-    if (/^示例\s*\d+[：:]/.test(line.trim())) {
+    // ── 示例标题 ──
+    if (isExampleStart(line)) {
       html += `<div class="desc-example-title">${esc(line.trim())}</div>`;
-      // 收集后续的 输入/输出/解释 行，直到空行或下一个示例/提示
       i++;
-      let blockLines = [];
-      while (i < lines.length && lines[i].trim() !== '' &&
-             !/^示例\s*\d+[：:]/.test(lines[i].trim()) &&
-             !/^提示[：:]/.test(lines[i].trim()) &&
-             !/^进阶[：:]/.test(lines[i].trim())) {
-        blockLines.push(lines[i]);
+      let rows = '';
+      while (i < lines.length && !isBreak(lines[i]) &&
+             !isExampleStart(lines[i]) && !isHintStart(lines[i]) && !isAdvanced(lines[i])) {
+        rows += exampleLine(lines[i]);
         i++;
       }
-      if (blockLines.length) {
-        const blockHTML = blockLines.map(l => {
-          const t = l.trim();
-          // 输入/输出/解释 加粗标签
-          return t.replace(/^(输入|输出|解释)[：:]\s*/, (_, label) =>
-            `<span class="ex-label">${label}：</span>`
-          ) + (t ? '' : '');
-        }).map(l => esc(l).replace(/&lt;span class=&quot;ex-label&quot;&gt;(.*?)&lt;\/span&gt;/,
-          (_, inner) => `<span class="ex-label">${inner}</span>`
-        ));
-        // 重新处理：直接用原始行
-        const safeBlock = blockLines.map(l => {
-          const t = l.trim();
-          const m = t.match(/^(输入|输出|解释)[：:]\s*(.*)/);
-          if (m) return `<span class="ex-label">${m[1]}：</span>${esc(m[2])}`;
-          return esc(t);
-        }).join('\n');
-        html += `<div class="desc-example-block">${safeBlock}</div>`;
-      }
+      if (rows) html += `<div class="desc-example-block">${rows}</div>`;
       continue;
     }
 
-    // 提示标题
-    if (/^提示[：:]/.test(line.trim())) {
+    // ── 提示 ──
+    if (isHintStart(line)) {
       html += `<div class="desc-example-title">提示：</div><ul class="desc-hints">`;
       i++;
-      while (i < lines.length && lines[i].trim() !== '' &&
-             !/^进阶[：:]/.test(lines[i].trim())) {
+      while (i < lines.length && !isBreak(lines[i]) && !isAdvanced(lines[i])) {
         const t = lines[i].trim();
         if (t) {
-          // 去掉开头的 • 或 - 或数字.
           const content = t.replace(/^[•\-\*]\s*/, '').replace(/^\d+\.\s*/, '');
-          html += `<li>${inlineCode(content)}</li>`;
+          html += `<li>${inline(content)}</li>`;
         }
         i++;
       }
@@ -1161,38 +1167,36 @@ function formatDesc(text) {
       continue;
     }
 
-    // 进阶
-    if (/^进阶[：:]/.test(line.trim())) {
+    // ── 进阶 ──
+    if (isAdvanced(line)) {
       const content = line.trim().replace(/^进阶[：:]\s*/, '');
-      html += `<div class="desc-advanced"><strong>进阶：</strong>${inlineCode(content)}</div>`;
+      html += `<div class="desc-advanced"><strong>进阶：</strong>${inline(content)}</div>`;
       i++;
       continue;
     }
 
-    // bullet 行（• 开头）
-    if (/^[•\-\*]\s/.test(line.trim())) {
+    // ── 独立 bullet 列表 ──
+    if (isBullet(line)) {
       html += `<ul class="desc-hints">`;
-      while (i < lines.length && /^[•\-\*]\s/.test(lines[i].trim())) {
+      while (i < lines.length && isBullet(lines[i])) {
         const content = lines[i].trim().replace(/^[•\-\*]\s*/, '');
-        html += `<li>${inlineCode(content)}</li>`;
+        html += `<li>${inline(content)}</li>`;
         i++;
       }
       html += `</ul>`;
       continue;
     }
 
-    // 普通段落：收集连续非空行
+    // ── 普通段落 ──
     let paraLines = [];
-    while (i < lines.length && lines[i].trim() !== '' &&
-           !/^示例\s*\d+[：:]/.test(lines[i].trim()) &&
-           !/^提示[：:]/.test(lines[i].trim()) &&
-           !/^进阶[：:]/.test(lines[i].trim()) &&
-           !/^[•\-\*]\s/.test(lines[i].trim())) {
+    while (i < lines.length && !isBreak(lines[i]) &&
+           !isExampleStart(lines[i]) && !isHintStart(lines[i]) &&
+           !isAdvanced(lines[i]) && !isBullet(lines[i])) {
       paraLines.push(lines[i].trim());
       i++;
     }
     if (paraLines.length) {
-      html += `<p>${paraLines.map(inlineCode).join('<br>')}</p>`;
+      html += `<p>${paraLines.map(inline).join('<br>')}</p>`;
     }
   }
 
