@@ -783,6 +783,30 @@ body, .top-bar, .bottom-nav, .hero-card, .cat-card, .p-item, .panel,
   padding: 14px 16px 6px; font-size: 13px; font-weight: 700;
   color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 1px;
 }
+
+/* ── AI 服务商选择器 ── */
+.provider-tabs {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+}
+@media (max-width: 360px) { .provider-tabs { grid-template-columns: repeat(3, 1fr); } }
+.provider-tab {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 10px 4px 8px; border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border); background: var(--bg-secondary);
+  color: var(--text-secondary); font-size: 11px; font-weight: 500;
+  cursor: pointer; transition: all 0.15s; position: relative;
+}
+.provider-tab span:first-child { font-size: 20px; line-height: 1; }
+.provider-tab.active {
+  border-color: var(--accent); background: var(--accent-glow);
+  color: var(--accent-light);
+}
+.provider-tab:active { transform: scale(0.96); }
+.provider-dot {
+  position: absolute; top: 6px; right: 6px;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--green);
+}
 .setting-item {
   padding: 14px 16px; display: flex; align-items: center;
   justify-content: space-between; gap: 12px;
@@ -1126,27 +1150,141 @@ function esc(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'
 function resetAll() { if (confirm('确定要重置所有刷题进度吗？此操作不可撤销。')) { localStorage.removeItem(SK); render(); } }
 
 // ═══════════════════════════════════════════════════════
-//  AI Chat
+//  AI Chat — Multi-Provider
 // ═══════════════════════════════════════════════════════
-const AK = 'lc100_apikey';
 const AI_SVC = 'lc100_ai_service';
 let aiMessages = [];
 let aiStreaming = false;
 let aiProblem = null;
 
-const AI_SERVICES = [
+// 支持 API 直连的服务商（OpenAI 兼容格式 或 Anthropic 格式）
+const AI_PROVIDERS = [
+  {
+    id: 'openai',
+    name: 'ChatGPT',
+    icon: '🤖',
+    endpoint: 'https://api.openai.com/v1/chat/completions',
+    models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'],
+    defaultModel: 'gpt-4o-mini',
+    format: 'openai',
+    keyPlaceholder: 'sk-...',
+    keyHint: '从 platform.openai.com 获取',
+    storageKey: 'lc100_key_openai',
+    modelKey: 'lc100_model_openai',
+  },
+  {
+    id: 'anthropic',
+    name: 'Claude',
+    icon: '🧠',
+    endpoint: 'https://api.anthropic.com/v1/messages',
+    models: ['claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229'],
+    defaultModel: 'claude-3-5-haiku-20241022',
+    format: 'anthropic',
+    keyPlaceholder: 'sk-ant-...',
+    keyHint: '从 console.anthropic.com 获取',
+    storageKey: 'lc100_key_anthropic',
+    modelKey: 'lc100_model_anthropic',
+  },
+  {
+    id: 'deepseek',
+    name: 'DeepSeek',
+    icon: '🔍',
+    endpoint: 'https://api.deepseek.com/chat/completions',
+    models: ['deepseek-chat', 'deepseek-reasoner'],
+    defaultModel: 'deepseek-chat',
+    format: 'openai',
+    keyPlaceholder: 'sk-...',
+    keyHint: '从 platform.deepseek.com 获取',
+    storageKey: 'lc100_key_deepseek',
+    modelKey: 'lc100_model_deepseek',
+  },
+  {
+    id: 'gemini',
+    name: 'Gemini',
+    icon: '✨',
+    endpoint: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+    models: ['gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-1.5-flash'],
+    defaultModel: 'gemini-2.0-flash',
+    format: 'openai',
+    keyPlaceholder: 'AIza...',
+    keyHint: '从 aistudio.google.com 获取',
+    storageKey: 'lc100_key_gemini',
+    modelKey: 'lc100_model_gemini',
+  },
+  {
+    id: 'kimi',
+    name: 'Kimi',
+    icon: '🌙',
+    endpoint: 'https://api.moonshot.cn/v1/chat/completions',
+    models: ['moonshot-v1-8k', 'moonshot-v1-32k', 'moonshot-v1-128k'],
+    defaultModel: 'moonshot-v1-8k',
+    format: 'openai',
+    keyPlaceholder: 'sk-...',
+    keyHint: '从 platform.moonshot.cn 获取',
+    storageKey: 'lc100_key_kimi',
+    modelKey: 'lc100_model_kimi',
+  },
+  {
+    id: 'tongyi',
+    name: '通义千问',
+    icon: '🌊',
+    endpoint: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+    models: ['qwen-turbo', 'qwen-plus', 'qwen-max', 'qwen-long'],
+    defaultModel: 'qwen-turbo',
+    format: 'openai',
+    keyPlaceholder: 'sk-...',
+    keyHint: '从 dashscope.aliyuncs.com 获取',
+    storageKey: 'lc100_key_tongyi',
+    modelKey: 'lc100_model_tongyi',
+  },
+  {
+    id: 'zhipu',
+    name: '智谱 GLM',
+    icon: '🧬',
+    endpoint: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
+    models: ['glm-4-flash', 'glm-4-air', 'glm-4', 'glm-4-plus'],
+    defaultModel: 'glm-4-flash',
+    format: 'openai',
+    keyPlaceholder: '...',
+    keyHint: '从 open.bigmodel.cn 获取',
+    storageKey: 'lc100_key_zhipu',
+    modelKey: 'lc100_model_zhipu',
+  },
+];
+
+// 免费跳转服务（无需 Key）
+const AI_FREE_SERVICES = [
   { id: 'deepseek', name: 'DeepSeek', url: 'https://chat.deepseek.com' },
   { id: 'yuanbao', name: '元宝', url: 'https://yuanbao.tencent.com/chat' },
   { id: 'kimi', name: 'Kimi', url: 'https://kimi.moonshot.cn' },
   { id: 'doubao', name: '豆包', url: 'https://www.doubao.com/chat' },
   { id: 'tongyi', name: '通义千问', url: 'https://tongyi.aliyun.com/qianwen' },
   { id: 'chatgpt', name: 'ChatGPT', url: 'https://chatgpt.com' },
+  { id: 'claude', name: 'Claude', url: 'https://claude.ai' },
+  { id: 'gemini', name: 'Gemini', url: 'https://gemini.google.com' },
 ];
 
-function getApiKey() { return localStorage.getItem(AK) || ''; }
-function setApiKey(k) { if (k) localStorage.setItem(AK, k); else localStorage.removeItem(AK); }
-function getAiService() { return localStorage.getItem(AI_SVC) || 'deepseek'; }
-function setAiService(s) { localStorage.setItem(AI_SVC, s); }
+function getProviderKey(pid) { return localStorage.getItem(AI_PROVIDERS.find(p=>p.id===pid)?.storageKey||'') || ''; }
+function setProviderKey(pid, k) {
+  const p = AI_PROVIDERS.find(x=>x.id===pid);
+  if (!p) return;
+  if (k) localStorage.setItem(p.storageKey, k); else localStorage.removeItem(p.storageKey);
+}
+function getProviderModel(pid) {
+  const p = AI_PROVIDERS.find(x=>x.id===pid);
+  if (!p) return '';
+  return localStorage.getItem(p.modelKey) || p.defaultModel;
+}
+function setProviderModel(pid, m) {
+  const p = AI_PROVIDERS.find(x=>x.id===pid);
+  if (p) localStorage.setItem(p.modelKey, m);
+}
+function getActiveProvider() { return localStorage.getItem(AI_SVC) || 'deepseek'; }
+function setActiveProvider(id) { localStorage.setItem(AI_SVC, id); }
+function getActiveProviderObj() { return AI_PROVIDERS.find(p=>p.id===getActiveProvider()) || AI_PROVIDERS[2]; }
+// 向后兼容旧版 DeepSeek Key
+function getAiService() { return getActiveProvider(); }
+function setAiService(s) { setActiveProvider(s); }
 
 function buildSystemPrompt(p) {
   return `你是一个 LeetCode 算法辅导助手。当前题目是：
@@ -1184,7 +1322,8 @@ function openAI(pid) {
   if (!aiProblem) return;
   aiMessages = [];
 
-  const hasKey = !!getApiKey();
+  const provider = getActiveProviderObj();
+  const hasKey = !!getProviderKey(provider.id);
   if (hasKey) {
     openApiChat();
   } else {
@@ -1198,7 +1337,7 @@ function openFreeChat() {
   const prompt = buildUserPrompt(p);
 
   let servicesHTML = '';
-  AI_SERVICES.forEach(s => {
+  AI_FREE_SERVICES.forEach(s => {
     servicesHTML += `<button class="ai-service-btn" onclick="copyAndJump('${s.id}')">${s.name} ↗</button>`;
   });
 
@@ -1217,7 +1356,7 @@ function openFreeChat() {
       <div class="section-label" style="padding:16px 0 8px;font-size:12px">选择 AI 服务（复制并跳转）</div>
       <div class="ai-services">${servicesHTML}</div>
       <div class="ai-msg system" style="max-width:100%;text-align:center;padding:16px 0 0">
-        💡 在设置中填入 DeepSeek API Key 可解锁应用内直接对话
+        💡 在设置中配置 API Key 可解锁应用内直接对话（支持 ChatGPT / Claude / DeepSeek / Gemini 等）
       </div>
     </div>
   </div>`;
@@ -1245,7 +1384,7 @@ function copyPrompt() {
 }
 
 function copyAndJump(serviceId) {
-  const svc = AI_SERVICES.find(s => s.id === serviceId);
+  const svc = AI_FREE_SERVICES.find(s => s.id === serviceId);
   const prompt = buildUserPrompt(aiProblem);
   navigator.clipboard.writeText(prompt).catch(() => {
     const ta = document.createElement('textarea');
@@ -1259,6 +1398,8 @@ function copyAndJump(serviceId) {
 // ── API 模式：应用内对话 ──
 function openApiChat() {
   const p = aiProblem;
+  const provider = getActiveProviderObj();
+  const model = getProviderModel(provider.id);
   aiMessages = [
     { role: 'system', content: buildSystemPrompt(p) },
   ];
@@ -1267,10 +1408,10 @@ function openApiChat() {
     <div class="ai-chat-header">
       <button class="ai-back" onclick="closeAI()">‹</button>
       <h2>AI 问答 · #${p.id} ${esc(p.title)}</h2>
-      <span class="ai-mode-tag ai-mode-api">API</span>
+      <span class="ai-mode-tag ai-mode-api">${provider.icon} ${provider.name}</span>
     </div>
     <div class="ai-messages" id="aiMsgs">
-      <div class="ai-msg system">已加载题目上下文，请随意提问</div>
+      <div class="ai-msg system">已加载题目上下文（${provider.name} · ${model}），请随意提问</div>
     </div>
     <div class="ai-input-bar">
       <textarea id="aiInput" placeholder="输入你的问题…" rows="1"
@@ -1293,11 +1434,9 @@ async function sendAI() {
   input.value = ''; input.style.height = 'auto';
   const msgs = $('aiMsgs');
 
-  // Add user message
   aiMessages.push({ role: 'user', content: text });
   msgs.innerHTML += `<div class="ai-msg user">${esc(text)}</div>`;
 
-  // Add typing indicator
   const typingId = 'typing_' + Date.now();
   msgs.innerHTML += `<div class="ai-msg ai" id="${typingId}"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>`;
   msgs.scrollTop = msgs.scrollHeight;
@@ -1305,25 +1444,52 @@ async function sendAI() {
   aiStreaming = true;
   $('aiSendBtn').disabled = true;
 
+  const provider = getActiveProviderObj();
+  const apiKey = getProviderKey(provider.id);
+  const model = getProviderModel(provider.id);
+
   try {
-    const apiKey = getApiKey();
-    const res = await fetch('https://api.deepseek.com/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: 'deepseek-chat',
-        messages: aiMessages,
-        stream: true,
-        max_tokens: 2048,
-      }),
-    });
+    let res;
+
+    if (provider.format === 'anthropic') {
+      // ── Anthropic Messages API ──
+      const sysMsg = aiMessages.find(m => m.role === 'system');
+      const userMsgs = aiMessages.filter(m => m.role !== 'system');
+      res = await fetch(provider.endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model,
+          system: sysMsg?.content || '',
+          messages: userMsgs,
+          stream: true,
+          max_tokens: 2048,
+        }),
+      });
+    } else {
+      // ── OpenAI 兼容格式 ──
+      res = await fetch(provider.endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model,
+          messages: aiMessages,
+          stream: true,
+          max_tokens: 2048,
+        }),
+      });
+    }
 
     if (!res.ok) {
       const err = await res.text();
       throw new Error(`API 请求失败 (${res.status}): ${err}`);
     }
 
-    // Stream response
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let aiText = '';
@@ -1341,7 +1507,13 @@ async function sendAI() {
         if (data === '[DONE]') break;
         try {
           const json = JSON.parse(data);
-          const delta = json.choices?.[0]?.delta?.content || '';
+          let delta = '';
+          if (provider.format === 'anthropic') {
+            // Anthropic SSE: event: content_block_delta
+            delta = json.delta?.text || '';
+          } else {
+            delta = json.choices?.[0]?.delta?.content || '';
+          }
           aiText += delta;
           aiEl.textContent = aiText;
           msgs.scrollTop = msgs.scrollHeight;
@@ -1375,36 +1547,76 @@ function renderSettings() {
   pageTitle.textContent = '设置';
   backBtn.classList.remove('show');
 
-  const key = getApiKey();
-  const hasKey = !!key;
-  const maskedKey = hasKey ? key.slice(0, 6) + '•'.repeat(12) + key.slice(-4) : '';
+  const activeId = getActiveProvider();
 
-  let h = `<div class="settings-page fade-up">
-    <div class="setting-group">
-      <div class="setting-group-title">AI 问答</div>
+  // 构建服务商选择器
+  const providerTabs = AI_PROVIDERS.map(p => {
+    const hasKey = !!getProviderKey(p.id);
+    const isActive = p.id === activeId;
+    return `<button class="provider-tab ${isActive?'active':''}" onclick="switchProvider('${p.id}')">
+      <span>${p.icon}</span>
+      <span>${p.name}</span>
+      ${hasKey ? '<span class="provider-dot"></span>' : ''}
+    </button>`;
+  }).join('');
+
+  // 构建当前服务商的配置面板
+  function providerPanel(p) {
+    const key = getProviderKey(p.id);
+    const hasKey = !!key;
+    const model = getProviderModel(p.id);
+    return `
       <div class="setting-item">
         <div>
-          <div class="s-label">DeepSeek API Key</div>
-          <div class="s-desc">填入后可在应用内直接与 AI 对话</div>
+          <div class="s-label">${p.icon} ${p.name} API Key</div>
+          <div class="s-desc">${p.keyHint}</div>
         </div>
         <span class="key-status ${hasKey?'active':'inactive'}">${hasKey?'已配置':'未配置'}</span>
       </div>
       <div class="setting-item" style="flex-direction:column;align-items:stretch;gap:8px">
-        <input type="password" id="apiKeyInput" placeholder="sk-..."
+        <input type="password" id="apiKeyInput_${p.id}" placeholder="${p.keyPlaceholder}"
           value="${esc(key)}" style="max-width:100%;width:100%"
           onfocus="this.type='text'" onblur="this.type='password'">
         <div style="display:flex;gap:8px">
-          <button class="copy-prompt-btn" style="flex:1" onclick="saveApiKey()">保存</button>
-          <button class="copy-prompt-btn" style="flex:1;color:var(--red)" onclick="clearApiKey()">清除</button>
+          <button class="copy-prompt-btn" style="flex:1" onclick="saveProviderKey('${p.id}')">保存</button>
+          <button class="copy-prompt-btn" style="flex:1;color:var(--red)" onclick="clearProviderKey('${p.id}')">清除</button>
         </div>
       </div>
       <div class="setting-item">
         <div>
-          <div class="s-label">免费模式默认服务</div>
-          <div class="s-desc">未配置 Key 时跳转的 AI 服务</div>
+          <div class="s-label">模型</div>
+          <div class="s-desc">选择使用的模型版本</div>
+        </div>
+        <select onchange="setProviderModel('${p.id}', this.value)" style="max-width:180px">
+          ${p.models.map(m => `<option value="${m}" ${model===m?'selected':''}>${m}</option>`).join('')}
+        </select>
+      </div>`;
+  }
+
+  const activeProvider = AI_PROVIDERS.find(p => p.id === activeId) || AI_PROVIDERS[2];
+
+  let h = `<div class="settings-page fade-up">
+
+    <div class="setting-group">
+      <div class="setting-group-title">AI 问答助手</div>
+      <div class="setting-item" style="flex-direction:column;align-items:stretch;gap:10px;padding-bottom:4px">
+        <div class="s-label" style="font-size:12px;color:var(--text-tertiary)">选择 AI 服务商（配置 Key 后可应用内直接对话）</div>
+        <div class="provider-tabs" id="providerTabs">${providerTabs}</div>
+      </div>
+      <div id="providerPanel">
+        ${providerPanel(activeProvider)}
+      </div>
+    </div>
+
+    <div class="setting-group">
+      <div class="setting-group-title">免费跳转模式</div>
+      <div class="setting-item">
+        <div>
+          <div class="s-label">未配置 Key 时的默认跳转服务</div>
+          <div class="s-desc">点击 AI 问答按钮时自动跳转</div>
         </div>
         <select onchange="setAiService(this.value)">
-          ${AI_SERVICES.map(s => `<option value="${s.id}" ${getAiService()===s.id?'selected':''}>${s.name}</option>`).join('')}
+          ${AI_FREE_SERVICES.map(s => `<option value="${s.id}" ${getAiService()===s.id?'selected':''}>${s.name}</option>`).join('')}
         </select>
       </div>
     </div>
@@ -1413,7 +1625,7 @@ function renderSettings() {
       <div class="setting-group-title">关于</div>
       <div class="setting-item">
         <div class="s-label">LeetCode Hot 100 刷题助手</div>
-        <span style="font-size:12px;color:var(--text-tertiary)">v2.0</span>
+        <span style="font-size:12px;color:var(--text-tertiary)">v3.0</span>
       </div>
       <div class="setting-item">
         <div>
@@ -1438,17 +1650,26 @@ function renderSettings() {
   app.innerHTML = h;
 }
 
-function saveApiKey() {
-  const key = $('apiKeyInput').value.trim();
-  setApiKey(key);
-  render();
+function switchProvider(pid) {
+  setActiveProvider(pid);
+  renderSettings();
 }
 
-function clearApiKey() {
-  setApiKey('');
-  $('apiKeyInput').value = '';
-  render();
+function saveProviderKey(pid) {
+  const input = $('apiKeyInput_' + pid);
+  if (!input) return;
+  setProviderKey(pid, input.value.trim());
+  renderSettings();
 }
+
+function clearProviderKey(pid) {
+  setProviderKey(pid, '');
+  renderSettings();
+}
+
+// 向后兼容旧版
+function saveApiKey() { saveProviderKey(getActiveProvider()); }
+function clearApiKey() { clearProviderKey(getActiveProvider()); }
 
 // ═══════════════════════════════════════════════════════
 //  Theme
