@@ -343,80 +343,99 @@ body {
 }
 /* 题目描述 — LeetCode 风格 */
 .desc-body {
-  font-size: 14.5px; line-height: 1.85; color: var(--text-primary);
+  font-size: 15px; line-height: 1.9; color: var(--text-primary);
   word-break: break-word;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
 }
 .desc-body p {
-  margin: 0 0 12px;
+  margin: 0 0 14px;
 }
 .desc-body p:last-child { margin-bottom: 0; }
 /* 行内代码 */
 .desc-body code {
-  font-family: var(--font-mono); font-size: 12.5px;
-  background: rgba(128,128,128,0.15); color: var(--text-primary);
-  padding: 1px 6px; border-radius: 4px;
-  border: 1px solid rgba(128,128,128,0.18);
+  font-family: var(--font-mono); font-size: 13px;
+  background: rgba(128,128,128,0.12); color: var(--text-primary);
+  padding: 2px 6px; border-radius: 4px;
+  border: 1px solid rgba(128,128,128,0.15);
 }
 [data-theme="light"] .desc-body code {
-  background: rgba(0,0,0,0.06); border-color: rgba(0,0,0,0.1);
+  background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.08);
 }
 /* 示例标题 */
 .desc-example-title {
-  font-size: 14px; font-weight: 700; color: var(--text-primary);
-  margin: 16px 0 6px;
+  font-size: 15px; font-weight: 700; color: var(--text-primary);
+  margin: 20px 0 10px;
 }
-/* 示例代码块 */
+/* 示例块 — 左竖线风格 */
 .desc-example-block {
-  background: var(--bg-elevated);
-  border-radius: var(--radius-sm);
-  padding: 12px 14px;
-  margin-bottom: 14px;
+  background: transparent;
+  border-left: 3px solid var(--border);
+  padding: 2px 0 2px 16px;
+  margin-bottom: 18px;
   font-family: var(--font-mono);
-  font-size: 13px;
-  line-height: 1.7;
+  font-size: 13.5px;
+  line-height: 2;
   color: var(--text-secondary);
-  border: 1px solid var(--border);
 }
 [data-theme="light"] .desc-example-block {
-  background: #f6f7f9; border-color: #e0e0e6; color: #444;
+  border-left-color: #d0d0d8; color: #555;
 }
 .desc-example-block .ex-row {
-  display: block; line-height: 1.75;
+  display: block;
 }
 .desc-example-block .ex-label {
   color: var(--text-primary); font-weight: 700;
-  margin-right: 2px;
+  margin-right: 4px;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
 }
 .desc-example-block .ex-val {
-  color: var(--text-primary);
+  color: var(--text-secondary);
 }
+[data-theme="light"] .desc-example-block .ex-val { color: #555; }
 /* 提示列表 */
 .desc-hints {
-  margin: 4px 0 0; padding: 0; list-style: none;
+  margin: 8px 0 0; padding: 0; list-style: none;
+  display: flex; flex-direction: column; gap: 10px;
 }
 .desc-hints li {
-  display: flex; align-items: flex-start; gap: 8px;
-  font-size: 13.5px; line-height: 1.7; color: var(--text-secondary);
-  margin-bottom: 6px;
+  display: flex; align-items: center; gap: 10px;
+  font-size: 14px; line-height: 1.6; color: var(--text-secondary);
 }
 .desc-hints li::before {
-  content: '•'; color: var(--accent-light);
-  font-size: 16px; line-height: 1.4; flex-shrink: 0;
+  content: '•'; color: var(--text-tertiary);
+  font-size: 18px; line-height: 1; flex-shrink: 0;
+}
+/* 含代码的提示行 — pill 样式 */
+.desc-hints li.hint-code {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 14px 6px 10px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-primary);
+}
+[data-theme="light"] .desc-hints li.hint-code {
+  background: #f3f4f6; border-color: #e0e0e6; color: #333;
+}
+.desc-hints li.hint-code::before {
+  color: var(--text-tertiary); font-size: 16px;
 }
 .desc-hints li code {
-  font-family: var(--font-mono); font-size: 12px;
-  background: rgba(128,128,128,0.15); color: var(--text-primary);
+  font-family: var(--font-mono); font-size: 12.5px;
+  background: rgba(128,128,128,0.12); color: var(--text-primary);
   padding: 1px 5px; border-radius: 4px;
-  border: 1px solid rgba(128,128,128,0.18);
+  border: 1px solid rgba(128,128,128,0.15);
 }
 [data-theme="light"] .desc-hints li code {
-  background: rgba(0,0,0,0.06); border-color: rgba(0,0,0,0.1);
+  background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.08);
 }
 /* 进阶提示 */
 .desc-advanced {
-  margin-top: 14px; font-size: 13.5px; color: var(--text-secondary);
+  margin-top: 16px; font-size: 14px; color: var(--text-secondary);
   padding: 10px 14px; border-radius: var(--radius-sm);
   background: var(--accent-glow2); border: 1px solid rgba(99,102,241,0.15);
+  line-height: 1.7;
 }
 .desc-advanced strong { color: var(--accent-light); }
 .code-block {
@@ -1159,7 +1178,10 @@ function formatDesc(text) {
         const t = lines[i].trim();
         if (t) {
           const content = t.replace(/^[•\-\*]\s*/, '').replace(/^\d+\.\s*/, '');
-          html += `<li>${inline(content)}</li>`;
+          // 含数字/符号/代码的约束条件 → pill 样式；纯文字 → 普通 bullet
+          const hasCode = /\d|\^|<=|>=|<|>|==|!=/.test(content);
+          const cls = hasCode ? ' class="hint-code"' : '';
+          html += `<li${cls}>${inline(content)}</li>`;
         }
         i++;
       }
