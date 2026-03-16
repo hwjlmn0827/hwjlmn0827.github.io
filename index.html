@@ -333,6 +333,11 @@ body {
   font-size: 14px; line-height: 1.8; color: var(--text-primary);
   white-space: pre-wrap;
 }
+.solution-text {
+  font-family: -apple-system, "system-ui", "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  font-size: 14.5px; line-height: 1.85;
+  white-space: pre-wrap;
+}
 .complexity-row {
   display: flex; gap: 8px; margin-bottom: 12px;
 }
@@ -424,10 +429,17 @@ font-size: 13px;
   color: var(--text-tertiary); font-size: 16px;
 }
 .desc-hints li code {
-  font-family: var(--font-mono); font-size: 12.5px;
-  background: rgba(128,128,128,0.12); color: var(--text-primary);
-  padding: 1px 5px; border-radius: 4px;
-  border: 1px solid rgba(128,128,128,0.15);
+font-family: var(--font-mono); font-size: 12.5px;
+background: rgba(128,128,128,0.12); color: var(--text-primary);
+padding: 1px 5px; border-radius: 4px;
+border: 1px solid rgba(128,128,128,0.15);
+}
+/* 提示行和描述正文里的上标 */
+.desc-hints sup, .desc-body sup {
+font-size: 0.72em;
+vertical-align: super;
+line-height: 0;
+font-family: Menlo, "Cascadia Code", Consolas, monospace;
 }
 [data-theme="light"] .desc-hints li code {
   background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.08);
@@ -455,20 +467,33 @@ font-size: 13px;
 }
 .desc-advanced strong { color: var(--accent-light); }
 .code-block {
+  position: relative;
   background: #1e1e2e; border: 1px solid var(--border);
   border-radius: var(--radius-sm); padding: 0;
   overflow-x: auto; -webkit-overflow-scrolling: touch;
   tab-size: 4;
 }
 .code-block pre {
-  margin: 0; padding: 16px; background: transparent !important;
-  font-size: 13px; line-height: 1.65;
+  margin: 0; padding: 16px 16px 16px 16px; background: transparent !important;
+  font-size: 13.5px; line-height: 1.7;
 }
 .code-block pre code {
-  font-family: var(--font-mono); font-size: 13px;
+  font-family: Menlo, "Cascadia Code", "Fira Code", Consolas, "Courier New", monospace;
+  font-size: 13.5px;
   color: #cdd6f4; background: transparent !important;
   text-shadow: none !important;
 }
+/* 复制按钮 */
+.code-copy-btn {
+  position: absolute; top: 10px; right: 10px;
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.5); border-radius: 6px;
+  padding: 4px 10px; font-size: 12px; cursor: pointer;
+  transition: all 0.2s; line-height: 1.6;
+  font-family: -apple-system, "system-ui", "Segoe UI", Helvetica, Arial, sans-serif;
+}
+.code-copy-btn:hover { background: rgba(255,255,255,0.14); color: rgba(255,255,255,0.85); }
+.code-copy-btn.copied { color: #a6e3a1; border-color: #a6e3a1; }
 /* ── Prism 暗色主题 (默认) ── */
 .token.comment, .token.prolog, .token.doctype, .token.cdata { color: #6c7086; font-style: italic; }
 .token.punctuation { color: #bac2de; }
@@ -690,9 +715,17 @@ font-size: 13px;
   background: rgba(0,0,0,0.04);
 }
 [data-theme="light"] .code-block {
-  background: #f6f8fa; border-color: rgba(0,0,0,0.1);
+  background: #ffffff;
+  border: 1px solid #e0e0e6;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
 }
 [data-theme="light"] .code-block pre code { color: #24292e; }
+[data-theme="light"] .code-copy-btn {
+  background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.12);
+  color: rgba(0,0,0,0.4);
+}
+[data-theme="light"] .code-copy-btn:hover { background: rgba(0,0,0,0.08); color: rgba(0,0,0,0.7); }
+[data-theme="light"] .code-copy-btn.copied { color: #16a34a; border-color: #16a34a; }
 [data-theme="light"] .token.comment, [data-theme="light"] .token.prolog,
 [data-theme="light"] .token.doctype, [data-theme="light"] .token.cdata { color: #6a737d; font-style: italic; }
 [data-theme="light"] .token.punctuation { color: #24292e; }
@@ -1140,11 +1173,16 @@ function formatDesc(text) {
 
   // 处理行内样式：上标 (10^4 → 10<sup>4</sup>) + 行内代码 (`x` → <code>x</code>)
   function inline(s) {
-    return esc(s)
-      // 上标：数字^数字，如 10^4、2^31
-      .replace(/(\d+)\^(\d+)/g, '$1<sup>$2</sup>')
+    if (!s) return '';
+    // 先做上标替换（在 esc 之前，避免 ^ 被转义）
+    const withSup = s.replace(/(\d+)\^(\d+)/g, '\x00SUP_OPEN\x00$1\x00SUP_MID\x00$2\x00SUP_CLOSE\x00');
+    // 再 esc
+    const escaped = esc(withSup);
+    // 还原上标占位符为真实 HTML
+    return escaped
+      .replace(/\x00SUP_OPEN\x00(\d+)\x00SUP_MID\x00(\d+)\x00SUP_CLOSE\x00/g, '$1<sup>$2</sup>')
       // 行内代码：`xxx`
-      .replace(/`([^`]+)`/g, (_, c) => `<code>${c}</code>`);
+      .replace(/`([^`]+)`/g, (_, c) => `<code>${esc(c)}</code>`);
   }
 
   // 示例块内每行：输入/输出/解释 加粗，值部分用等宽字体
@@ -1274,8 +1312,8 @@ function renderDetail() {
     ${p.desc ? panelHTML('📄','题目描述', `<div class="desc-body">${formatDesc(p.desc)}</div>`, true) : ''}
     ${panelHTML('💡','思路提示', `<p>${esc(p.hint)}</p>`, !p.desc)}
     ${panelHTML('📝', p.solution_name||'解法',
-      `${p.time_complexity ? `<div class="complexity-row"><span class="complexity-tag">⏱ ${esc(p.time_complexity)}</span><span class="complexity-tag">💾 ${esc(p.space_complexity||'-')}</span></div>` : ''}<p>${esc(p.solution||'')}</p>`, false)}
-    ${panelHTML('💻','代码实现', `<div class="code-block"><pre><code class="language-javascript">${esc(p.code||'')}</code></pre></div>`, false)}
+      `${p.time_complexity ? `<div class="complexity-row"><span class="complexity-tag">⏱ ${esc(p.time_complexity)}</span><span class="complexity-tag">💾 ${esc(p.space_complexity||'-')}</span></div>` : ''}<p class="solution-text">${esc(p.solution||'')}</p>`, false)}
+    ${panelHTML('💻','代码实现', `<div class="code-block"><button class="code-copy-btn" onclick="copyCode(this)">复制</button><pre><code class="language-javascript">${esc(p.code||'')}</code></pre></div>`, false)}
     <button class="ai-btn" onclick="openAI(${p.id})">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
       AI 问答助手
@@ -1367,6 +1405,23 @@ function showRandom() {
   $('overlay').classList.add('show');
 }
 function closeOverlay() { $('overlay').classList.remove('show'); }
+
+function copyCode(btn) {
+  const code = btn.closest('.code-block').querySelector('code');
+  navigator.clipboard.writeText(code.textContent).then(() => {
+    btn.textContent = '已复制 ✓';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '复制'; btn.classList.remove('copied'); }, 2000);
+  }).catch(() => {
+    // fallback
+    const sel = window.getSelection(), range = document.createRange();
+    range.selectNodeContents(code); sel.removeAllRanges(); sel.addRange(range);
+    document.execCommand('copy');
+    sel.removeAllRanges();
+    btn.textContent = '已复制 ✓'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '复制'; btn.classList.remove('copied'); }, 2000);
+  });
+}
 
 // ═══════════════════════════════════════════════════════
 //  Utils
