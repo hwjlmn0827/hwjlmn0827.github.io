@@ -341,16 +341,77 @@ body {
   background: var(--accent-glow2); color: var(--accent-light);
   font-weight: 600; font-family: var(--font-mono);
 }
-/* 题目描述 */
+/* 题目描述 — LeetCode 风格 */
 .desc-body {
-  font-size: 14px; line-height: 1.8; color: var(--text-primary);
-  white-space: pre-wrap; word-break: break-word;
+  font-size: 14.5px; line-height: 1.85; color: var(--text-primary);
+  word-break: break-word;
 }
+.desc-body p {
+  margin: 0 0 12px;
+}
+.desc-body p:last-child { margin-bottom: 0; }
+/* 行内代码 */
 .desc-body code {
-  font-family: var(--font-mono); font-size: 12px;
-  background: var(--accent-glow2); color: var(--accent-light);
-  padding: 1px 5px; border-radius: 4px;
+  font-family: var(--font-mono); font-size: 12.5px;
+  background: rgba(128,128,128,0.15); color: var(--text-primary);
+  padding: 1px 6px; border-radius: 4px;
+  border: 1px solid rgba(128,128,128,0.18);
 }
+[data-theme="light"] .desc-body code {
+  background: rgba(0,0,0,0.06); border-color: rgba(0,0,0,0.1);
+}
+/* 示例标题 */
+.desc-example-title {
+  font-size: 14px; font-weight: 700; color: var(--text-primary);
+  margin: 16px 0 6px;
+}
+/* 示例代码块 */
+.desc-example-block {
+  background: var(--bg-elevated);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+[data-theme="light"] .desc-example-block {
+  background: #f6f7f9; border-color: #e0e0e6; color: #444;
+}
+.desc-example-block .ex-label {
+  color: var(--text-primary); font-weight: 600;
+}
+/* 提示列表 */
+.desc-hints {
+  margin: 4px 0 0; padding: 0; list-style: none;
+}
+.desc-hints li {
+  display: flex; align-items: flex-start; gap: 8px;
+  font-size: 13.5px; line-height: 1.7; color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+.desc-hints li::before {
+  content: '•'; color: var(--accent-light);
+  font-size: 16px; line-height: 1.4; flex-shrink: 0;
+}
+.desc-hints li code {
+  font-family: var(--font-mono); font-size: 12px;
+  background: rgba(128,128,128,0.15); color: var(--text-primary);
+  padding: 1px 5px; border-radius: 4px;
+  border: 1px solid rgba(128,128,128,0.18);
+}
+[data-theme="light"] .desc-hints li code {
+  background: rgba(0,0,0,0.06); border-color: rgba(0,0,0,0.1);
+}
+/* 进阶提示 */
+.desc-advanced {
+  margin-top: 14px; font-size: 13.5px; color: var(--text-secondary);
+  padding: 10px 14px; border-radius: var(--radius-sm);
+  background: var(--accent-glow2); border: 1px solid rgba(99,102,241,0.15);
+}
+.desc-advanced strong { color: var(--accent-light); }
 .code-block {
   background: #1e1e2e; border: 1px solid var(--border);
   border-radius: var(--radius-sm); padding: 0;
@@ -1028,6 +1089,116 @@ function pItemHTML(p) {
   </div>`;
 }
 
+// 将纯文本 desc 解析为 LeetCode 风格 HTML
+function formatDesc(text) {
+  if (!text) return '';
+  const lines = text.split('\n');
+  let html = '';
+  let i = 0;
+
+  // 行内代码：`code` 或 code 形式（反引号）
+  function inlineCode(s) {
+    // 把 `xxx` 转为 <code>xxx</code>
+    return esc(s).replace(/`([^`]+)`/g, (_, c) => `<code>${c}</code>`);
+  }
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // 空行 → 段落分隔
+    if (line.trim() === '') { i++; continue; }
+
+    // 示例标题：「示例 N：」或「示例 N:」
+    if (/^示例\s*\d+[：:]/.test(line.trim())) {
+      html += `<div class="desc-example-title">${esc(line.trim())}</div>`;
+      // 收集后续的 输入/输出/解释 行，直到空行或下一个示例/提示
+      i++;
+      let blockLines = [];
+      while (i < lines.length && lines[i].trim() !== '' &&
+             !/^示例\s*\d+[：:]/.test(lines[i].trim()) &&
+             !/^提示[：:]/.test(lines[i].trim()) &&
+             !/^进阶[：:]/.test(lines[i].trim())) {
+        blockLines.push(lines[i]);
+        i++;
+      }
+      if (blockLines.length) {
+        const blockHTML = blockLines.map(l => {
+          const t = l.trim();
+          // 输入/输出/解释 加粗标签
+          return t.replace(/^(输入|输出|解释)[：:]\s*/, (_, label) =>
+            `<span class="ex-label">${label}：</span>`
+          ) + (t ? '' : '');
+        }).map(l => esc(l).replace(/&lt;span class=&quot;ex-label&quot;&gt;(.*?)&lt;\/span&gt;/,
+          (_, inner) => `<span class="ex-label">${inner}</span>`
+        ));
+        // 重新处理：直接用原始行
+        const safeBlock = blockLines.map(l => {
+          const t = l.trim();
+          const m = t.match(/^(输入|输出|解释)[：:]\s*(.*)/);
+          if (m) return `<span class="ex-label">${m[1]}：</span>${esc(m[2])}`;
+          return esc(t);
+        }).join('\n');
+        html += `<div class="desc-example-block">${safeBlock}</div>`;
+      }
+      continue;
+    }
+
+    // 提示标题
+    if (/^提示[：:]/.test(line.trim())) {
+      html += `<div class="desc-example-title">提示：</div><ul class="desc-hints">`;
+      i++;
+      while (i < lines.length && lines[i].trim() !== '' &&
+             !/^进阶[：:]/.test(lines[i].trim())) {
+        const t = lines[i].trim();
+        if (t) {
+          // 去掉开头的 • 或 - 或数字.
+          const content = t.replace(/^[•\-\*]\s*/, '').replace(/^\d+\.\s*/, '');
+          html += `<li>${inlineCode(content)}</li>`;
+        }
+        i++;
+      }
+      html += `</ul>`;
+      continue;
+    }
+
+    // 进阶
+    if (/^进阶[：:]/.test(line.trim())) {
+      const content = line.trim().replace(/^进阶[：:]\s*/, '');
+      html += `<div class="desc-advanced"><strong>进阶：</strong>${inlineCode(content)}</div>`;
+      i++;
+      continue;
+    }
+
+    // bullet 行（• 开头）
+    if (/^[•\-\*]\s/.test(line.trim())) {
+      html += `<ul class="desc-hints">`;
+      while (i < lines.length && /^[•\-\*]\s/.test(lines[i].trim())) {
+        const content = lines[i].trim().replace(/^[•\-\*]\s*/, '');
+        html += `<li>${inlineCode(content)}</li>`;
+        i++;
+      }
+      html += `</ul>`;
+      continue;
+    }
+
+    // 普通段落：收集连续非空行
+    let paraLines = [];
+    while (i < lines.length && lines[i].trim() !== '' &&
+           !/^示例\s*\d+[：:]/.test(lines[i].trim()) &&
+           !/^提示[：:]/.test(lines[i].trim()) &&
+           !/^进阶[：:]/.test(lines[i].trim()) &&
+           !/^[•\-\*]\s/.test(lines[i].trim())) {
+      paraLines.push(lines[i].trim());
+      i++;
+    }
+    if (paraLines.length) {
+      html += `<p>${paraLines.map(inlineCode).join('<br>')}</p>`;
+    }
+  }
+
+  return html;
+}
+
 function renderDetail() {
   const p = PROBLEMS.find(x => x.id === curPid);
   if (!p) return navigate('home');
@@ -1046,7 +1217,7 @@ function renderDetail() {
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
       在 LeetCode 中打开
     </a>
-    ${p.desc ? panelHTML('📄','题目描述', `<div class="desc-body">${esc(p.desc)}</div>`, true) : ''}
+    ${p.desc ? panelHTML('📄','题目描述', `<div class="desc-body">${formatDesc(p.desc)}</div>`, true) : ''}
     ${panelHTML('💡','思路提示', `<p>${esc(p.hint)}</p>`, !p.desc)}
     ${panelHTML('📝', p.solution_name||'解法',
       `${p.time_complexity ? `<div class="complexity-row"><span class="complexity-tag">⏱ ${esc(p.time_complexity)}</span><span class="complexity-tag">💾 ${esc(p.space_complexity||'-')}</span></div>` : ''}<p>${esc(p.solution||'')}</p>`, false)}
