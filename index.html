@@ -1253,7 +1253,7 @@ function formatDesc(text) {
           // 含数字/符号/代码的约束条件 → pill 样式；纯文字 → 普通 bullet
           const hasCode = /\d|\^|<=|>=|<|>|==|!=/.test(content);
           const cls = hasCode ? ' class="hint-code"' : '';
-          html += `<li${cls}>${inline(content)}</li>`;
+          html += `<li${cls}><span>${inline(content)}</span></li>`;
         }
         i++;
       }
@@ -1274,7 +1274,7 @@ function formatDesc(text) {
       html += `<ul class="desc-hints">`;
       while (i < lines.length && isBullet(lines[i])) {
         const content = lines[i].trim().replace(/^[•\-\*]\s*/, '');
-        html += `<li>${inline(content)}</li>`;
+        html += `<li><span>${inline(content)}</span></li>`;
         i++;
       }
       html += `</ul>`;
